@@ -2,14 +2,14 @@
 > **Cast your screen with one touch**
 
 ## ⬇️ تحميل التطبيق (APK)
-👉 **[اضغط هنا لتحميل CastDZ-v1.0.0-debug.apk مباشرة](https://github.com/takieddinexx4-cmyk/DZCAST-android/releases/latest/download/CastDZ-v1.0.0-debug.apk)**
+👉 **[اضغط هنا لتحميل CastDZ-v1.1.0-debug.apk مباشرة](https://github.com/takieddinexx4-cmyk/DZCAST-android/releases/latest/download/CastDZ-v1.1.0-debug.apk)**
 
 ## 📋 البطاقة التقنية للتطبيق (مستخرجة تلقائياً)
 | الخاصية | القيمة |
 |---|---|
 | **اسم التطبيق** | CastDZ |
 | **المعرّف (Package ID)** | `com.castdz.app` |
-| **الإصدار** | `v1.0.0` (Build `1`) |
+| **الإصدار** | `v1.1.0` (Build `2`) |
 | **أنظمة أندرويد المدعومة** | Android 8.0+ (`minSdk 26` → `targetSdk 36` / `compileSdk 36`) |
 | **اللغات المدعومة** | ar, en, fr (مع دعم كامل لاتجاه RTL) |
 | **بنية المشروع** | 52 ملف Kotlin + 3 ملفات اختبارات وحدات |
