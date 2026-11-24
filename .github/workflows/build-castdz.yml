@@ -1,0 +1,177 @@
+name: Build CastDZ APK & Update README from ZIP
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'CastDZ-Android.zip'
+      - '.github/workflows/build-castdz.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unzip CastDZ-Android.zip automatically
+        id: unzip
+        shell: bash
+        run: |
+          if [ ! -f "CastDZ-Android.zip" ]; then
+            echo "❌ لم يتم العثور على ملف CastDZ-Android.zip في المجلد الرئيسي للمستودع."
+            exit 1
+          fi
+          rm -rf build_src
+          mkdir -p build_src
+          unzip -q CastDZ-Android.zip -d build_src
+
+          if [ -f "build_src/CastDZ/settings.gradle.kts" ]; then
+            PROJECT_DIR="build_src/CastDZ"
+          elif [ -f "build_src/settings.gradle.kts" ]; then
+            PROJECT_DIR="build_src"
+          else
+            PROJECT_DIR="$(dirname "$(find build_src -name 'settings.gradle.kts' | head -n 1)")"
+          fi
+
+          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Extract app specs & generate Arabic README + Release Notes
+        id: info
+        shell: bash
+        env:
+          REPO_FULL: ${{ github.repository }}
+        run: |
+          python3 - << 'PYEOF'
+          import os, re, xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          p = Path("${{ steps.unzip.outputs.project_dir }}")
+          gradle_txt = (p / "app/build.gradle.kts").read_text(encoding="utf-8")
+
+          def grab(pattern, default="N/A"):
+              m = re.search(pattern, gradle_txt)
+              return m.group(1) if m else default
+
+          app_id = grab(r'applicationId\s*=\s*"([^"]+)"')
+          ver_name = grab(r'versionName\s*=\s*"([^"]+)"')
+          ver_code = grab(r'versionCode\s*=\s*(\d+)')
+          min_sdk = grab(r'minSdk\s*=\s*(\d+)')
+          target_sdk = grab(r'targetSdk\s*=\s*(\d+)')
+          compile_sdk = grab(r'compileSdk\s*=\s*(\d+)')
+
+          ar_strings = {e.attrib["name"]: e.text for e in ET.parse(p / "app/src/main/res/values-ar/strings.xml").getroot().findall("string")}
+          en_strings = {e.attrib["name"]: e.text for e in ET.parse(p / "app/src/main/res/values/strings.xml").getroot().findall("string")}
+
+          app_name = en_strings.get("app_name", "CastDZ")
+          tagline_ar = ar_strings.get("app_tagline", "اعرض شاشتك بلمسة واحدة")
+          tagline_en = en_strings.get("app_tagline", "Cast your screen with one touch")
+
+          manifest = ET.parse(p / "app/src/main/AndroidManifest.xml").getroot()
+          ns = "{http://schemas.android.com/apk/res/android}"
+          perms = sorted({el.attrib.get(f"{ns}name", "").split(".")[-1] for el in manifest.findall("uses-permission")})
+          kt_count = len(list((p / "app/src/main/java").rglob("*.kt")))
+          test_count = len(list((p / "app/src/test/java").rglob("*.kt")))
+          locales = sorted([d.name.replace("values-", "") if "-" in d.name else "en" for d in (p / "app/src/main/res").glob("values*") if (d / "strings.xml").exists()])
+
+          apk_name = f"CastDZ-v{ver_name}-debug.apk"
+          repo = os.environ["REPO_FULL"]
+          download_url = f"https://github.com/{repo}/releases/latest/download/{apk_name}"
+
+          doc = f"""# 📺 {app_name} — {tagline_ar}
+          > **{tagline_en}**
+
+          ## ⬇️ تحميل التطبيق (APK)
+          👉 **[اضغط هنا لتحميل {apk_name} مباشرة]({download_url})**
+
+          ## 📋 البطاقة التقنية للتطبيق (مستخرجة تلقائياً)
+          | الخاصية | القيمة |
+          |---|---|
+          | **اسم التطبيق** | {app_name} |
+          | **المعرّف (Package ID)** | `{app_id}` |
+          | **الإصدار** | `v{ver_name}` (Build `{ver_code}`) |
+          | **أنظمة أندرويد المدعومة** | Android 8.0+ (`minSdk {min_sdk}` → `targetSdk {target_sdk}` / `compileSdk {compile_sdk}`) |
+          | **اللغات المدعومة** | {", ".join(locales)} (مع دعم كامل لاتجاه RTL) |
+          | **بنية المشروع** | {kt_count} ملف Kotlin + {test_count} ملفات اختبارات وحدات |
+
+          ## ✨ شرح مختصر لمزايا التطبيق
+          - **اكتشاف فوري للشاشات (4 طبقات بالتوازي):** Google Cast و mDNS و SSDP/UPnP (DLNA و Roku) بالإضافة للإدخال اليدوي عبر IP، مع تشخيص تلقائي للأعطال بعد 8 ثوانٍ ووضع أجهزة وهمية للتجربة.
+          - **متصفح فيديوهات الويب:** تبويبات متعددة، إشارات مرجعية، واكتشاف تلقائي لروابط الفيديو (`.mp4`, `.m3u8`, `.mpd`, `.webm`) مع زر عائم للبث الفوري.
+          - **بث الوسائط المحلية:** خادم `NanoHTTPD` مدمج يدعم التقديم والترجيع (`HTTP Range 206`) ومعاينة محلية عبر Media3 ExoPlayer.
+          - **تحكم كامل وعكس الشاشة:** مشغل مصغّر وموسّع، تحكم من شاشة القفل، وفتح مباشر للوحة العرض اللاسلكي في أندرويد.
+          - **واجهة زجاجية بدون إعلانات:** Material 3 Glassmorphism وأيقونات ثلاثية الأبعاد ورسوم Lottie متحركة.
+
+          ## 🔐 الأذونات المستخدمة
+          `{", ".join(perms)}`
+          """
+          doc = "\n".join(line.lstrip() for line in doc.splitlines())
+          Path("RELEASE_NOTES.md").write_text(doc, encoding="utf-8")
+          Path("README.md").write_text(doc, encoding="utf-8")
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as s:
+              s.write(doc + "\n")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"version_name={ver_name}\n")
+              out.write(f"apk_name={apk_name}\n")
+          PYEOF
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Prepare Android SDK (API 36)
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager | head -n 1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle 8.14.3
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.14.3
+
+      - name: Run unit tests & build Debug APK
+        working-directory: ${{ steps.unzip.outputs.project_dir }}
+        run: |
+          gradle testDebugUnitTest assembleDebug --no-daemon
+
+      - name: Prepare APK for download
+        shell: bash
+        run: |
+          cp "${{ steps.unzip.outputs.project_dir }}/app/build/outputs/apk/debug/app-debug.apk" "${{ steps.info.outputs.apk_name }}"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CastDZ-Debug-APK
+          path: ${{ steps.info.outputs.apk_name }}
+          retention-days: 30
+
+      - name: Publish GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.info.outputs.version_name }}-build-${{ github.run_number }}
+          name: CastDZ v${{ steps.info.outputs.version_name }} (Build #${{ github.run_number }})
+          body_path: RELEASE_NOTES.md
+          files: ${{ steps.info.outputs.apk_name }}
+          make_latest: true
+
+      - name: Commit auto-generated README.md to repository
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: update CastDZ app info and APK download link [skip ci]"
+            git push
+          fi
