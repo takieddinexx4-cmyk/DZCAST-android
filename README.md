@@ -2,17 +2,17 @@
 > **Cast your screen with one touch**
 
 ## ⬇️ تحميل التطبيق (APK)
-👉 **[اضغط هنا لتحميل CastDZ-v1.1.0-debug.apk مباشرة](https://github.com/takieddinexx4-cmyk/DZCAST-android/releases/latest/download/CastDZ-v1.1.0-debug.apk)**
+👉 **[اضغط هنا لتحميل CastDZ-v1.2.0-debug.apk مباشرة](https://github.com/takieddinexx4-cmyk/DZCAST-android/releases/latest/download/CastDZ-v1.2.0-debug.apk)**
 
 ## 📋 البطاقة التقنية للتطبيق (مستخرجة تلقائياً)
 | الخاصية | القيمة |
 |---|---|
 | **اسم التطبيق** | CastDZ |
 | **المعرّف (Package ID)** | `com.castdz.app` |
-| **الإصدار** | `v1.1.0` (Build `2`) |
+| **الإصدار** | `v1.2.0` (Build `3`) |
 | **أنظمة أندرويد المدعومة** | Android 8.0+ (`minSdk 26` → `targetSdk 36` / `compileSdk 36`) |
 | **اللغات المدعومة** | ar, en, fr (مع دعم كامل لاتجاه RTL) |
-| **بنية المشروع** | 52 ملف Kotlin + 3 ملفات اختبارات وحدات |
+| **بنية المشروع** | 53 ملف Kotlin + 3 ملفات اختبارات وحدات |
 
 ## ✨ شرح مختصر لمزايا التطبيق
 - **اكتشاف فوري للشاشات (4 طبقات بالتوازي):** Google Cast و mDNS و SSDP/UPnP (DLNA و Roku) بالإضافة للإدخال اليدوي عبر IP، مع تشخيص تلقائي للأعطال بعد 8 ثوانٍ ووضع أجهزة وهمية للتجربة.
